@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IdeaValidator — AI Startup Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeede8;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #9b9b97;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --green: #0F6E56; --green-bg: #E1F5EE; --green-text: #085041;
+    --amber: #854F0B; --amber-bg: #FAEEDA;
+    --red: #A32D2D; --red-bg: #FCEBEB;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+  .app { max-width: 980px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+
+  /* Header */
+  .hdr { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 34px; height: 34px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo-mark svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .logo-name { font-size: 15px; font-weight: 600; }
+  .logo-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .nav { display: flex; gap: 4px; }
+  .nb { padding: 7px 16px; border-radius: 20px; border: 1px solid transparent; font-size: 13px; cursor: pointer; background: transparent; color: var(--text2); font-family: inherit; transition: all 0.15s; }
+  .nb.on { background: var(--bg); border-color: var(--border2); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  .nb:hover:not(.on) { color: var(--text); background: var(--bg2); }
+
+  /* Views */
+  .view { display: none; animation: fadeIn 0.2s ease; }
+  .view.on { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+  /* Cards */
+  .card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+
+  /* Submit view */
+  .submit-wrap { max-width: 620px; margin: 0 auto; }
+  .page-title { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .page-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.75rem; line-height: 1.6; }
+  .field { margin-bottom: 1.125rem; }
+  .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+  .field input, .field textarea {
+    width: 100%; font-family: inherit; font-size: 14px;
+    padding: 10px 12px; border: 1px solid var(--border2);
+    border-radius: var(--radius); background: var(--bg);
+    color: var(--text); outline: none; resize: vertical; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(15,110,86,0.1); }
+  .field textarea { min-height: 130px; line-height: 1.6; }
+  .char-count { font-size: 11px; color: var(--text3); text-align: right; margin-top: 4px; }
+  .submit-btn {
+    width: 100%; padding: 12px; border-radius: var(--radius); border: none;
+    background: var(--green); color: #fff; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit; display: flex; align-items: center;
+    justify-content: center; gap: 8px; transition: opacity 0.15s; margin-bottom: 1.25rem;
+  }
+  .submit-btn:hover { opacity: 0.88; }
+  .submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .feature-item { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; background: var(--bg2); border-radius: var(--radius); }
+  .feature-icon { width: 22px; height: 22px; background: var(--green-bg); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .feature-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+  /* Dashboard */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  .stat-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.875rem 1rem; }
+  .stat-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+  .stat-value { font-size: 22px; font-weight: 600; font-family: 'Courier New', monospace; }
+  .db-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .search-box { position: relative; }
+  .search-box input { padding: 8px 12px 8px 34px; border: 1px solid var(--border2); border-radius: 20px; background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit; width: 220px; outline: none; }
+  .search-box input:focus { border-color: var(--green); }
+  .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; pointer-events: none; }
+  .filters { display: flex; gap: 5px; }
+  .fb { padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px; cursor: pointer; background: transparent; color: var(--text2); font-family: inherit; transition: all 0.15s; }
+  .fb.on { border-color: var(--green); background: var(--green-bg); color: var(--green-text); font-weight: 500; }
+  .ideas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .idea-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.125rem; cursor: pointer; transition: all 0.15s; position: relative; animation: fadeIn 0.25s ease; }
+  .idea-card:hover { border-color: var(--border2); box-shadow: 0 2px 8px rgba(0,0,0,0.06); transform: translateY(-1px); }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .card-title { font-size: 14px; font-weight: 600; line-height: 1.4; flex: 1; }
+  .risk-badge { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .rL { background: var(--green-bg); color: var(--green-text); }
+  .rM { background: var(--amber-bg); color: var(--amber); }
+  .rH { background: var(--red-bg); color: var(--red); }
+  .card-desc { font-size: 12px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 9px; }
+  .score-wrap { display: flex; align-items: center; gap: 7px; }
+  .score-track { width: 58px; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 2px; background: var(--green); }
+  .score-num { font-size: 12px; font-weight: 600; font-family: 'Courier New', monospace; }
+  .card-date { font-size: 11px; color: var(--text3); }
+  .del-btn { position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); color: var(--text3); font-size: 12px; cursor: pointer; display: none; align-items: center; justify-content: center; transition: all 0.12s; }
+  .idea-card:hover .del-btn { display: flex; }
+  .del-btn:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+  .empty-state { text-align: center; padding: 4rem 1rem; grid-column: 1 / -1; }
+  .empty-state h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .empty-state p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  /* Detail view */
+  .back-btn { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text2); cursor: pointer; margin-bottom: 1.5rem; border: none; background: none; font-family: inherit; padding: 0; transition: color 0.12s; }
+  .back-btn:hover { color: var(--text); }
+  .detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .detail-title { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 6px; }
+  .detail-desc { font-size: 14px; color: var(--text2); line-height: 1.6; max-width: 560px; }
+  .action-btns { display: flex; gap: 8px; flex-shrink: 0; }
+  .action-btn { padding: 8px 16px; border-radius: var(--radius); border: 1px solid var(--border2); font-size: 13px; cursor: pointer; background: var(--bg); color: var(--text2); font-family: inherit; font-weight: 500; transition: all 0.15s; }
+  .action-btn:hover { background: var(--bg2); color: var(--text); }
+  .action-btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .action-btn.primary:hover { opacity: 0.88; }
+  .action-btn.danger { color: var(--red); border-color: var(--red-bg); }
+  .action-btn.danger:hover { background: var(--red-bg); border-color: var(--red); }
+  .metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+  .metric { background: var(--bg2); border-radius: var(--radius); padding: 0.875rem 1rem; }
+  .metric-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+  .metric-value { font-size: 18px; font-weight: 600; }
+  .gauge-row { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.125rem 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+  .gauge-wrap { position: relative; width: 100px; height: 100px; flex-shrink: 0; }
+  .gauge-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+  .gauge-num { font-size: 24px; font-weight: 700; font-family: 'Courier New', monospace; }
+  .gauge-sub { font-size: 11px; color: var(--text2); }
+  .gauge-info { flex: 1; min-width: 180px; }
+  .gauge-info h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text2); margin-bottom: 7px; }
+  .gauge-info p { font-size: 13px; line-height: 1.65; color: var(--text2); }
+  .sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .report-sec { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.125rem; }
+  .report-sec h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text2); margin-bottom: 8px; }
+  .report-sec p { font-size: 13px; line-height: 1.65; color: var(--text); }
+  .comp-list { list-style: none; }
+  .comp-list li { padding: 7px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: flex-start; }
+  .comp-list li:last-child { border-bottom: none; }
+  .comp-name { font-size: 12px; font-weight: 600; min-width: 100px; flex-shrink: 0; color: var(--text); }
+  .comp-diff { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .tech-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .tech-pill { font-size: 11px; padding: 4px 11px; border-radius: 20px; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); font-family: 'Courier New', monospace; }
+  .full-row { margin-bottom: 10px; }
+
+  /* Confirm overlay */
+  .confirm-overlay { display: none; min-height: 180px; background: rgba(0,0,0,0.4); border-radius: var(--radius-lg); align-items: center; justify-content: center; margin-bottom: 1rem; }
+  .confirm-overlay.show { display: flex; }
+  .confirm-box { background: var(--bg); border: 1px solid var(--border2); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 320px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .confirm-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .confirm-box p { font-size: 13px; color: var(--text2); margin-bottom: 1.25rem; line-height: 1.5; }
+  .confirm-btns { display: flex; gap: 8px; justify-content: center; }
+  .cbtn { padding: 8px 20px; border-radius: var(--radius); font-size: 13px; cursor: pointer; font-family: inherit; font-weight: 500; }
+  .cbtn-cancel { border: 1px solid var(--border2); background: transparent; color: var(--text2); }
+  .cbtn-del { border: none; background: #E24B4A; color: #fff; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 9999; opacity: 0; transition: all 0.25s; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .toast.err { background: #E24B4A; }
+
+  @media (max-width: 560px) {
+    .sections-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
+  }
+  @media print {
+    body { background: #fff; }
+    .hdr, .nav, .back-btn, .action-btns, .confirm-overlay, .stats-row, .ideas-grid, .view:not(#view-detail) { display: none !important; }
+    .view#view-detail { display: block !important; }
+    .report-sec, .gauge-row, .sections-grid, .full-row, .metrics-row { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div>
+        <div class="logo-name">IdeaValidator</div>
+        <div class="logo-sub">AI-Powered Startup Analysis</div>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="nb on" onclick="gv('submit')">Submit idea</button>
+      <button class="nb" onclick="gv('dashboard')" id="dnav">Dashboard <span id="dcnt"></span></button>
+    </div>
+  </div>
+
+  <!-- SUBMIT VIEW -->
+  <div id="view-submit" class="view on">
+    <div class="submit-wrap">
+      <h1 class="page-title">Validate your startup idea</h1>
+      <p class="page-sub">Get an AI-generated report in seconds — covering market, competitors, risk level, and profitability score.</p>
+      <div class="field">
+        <label for="ititle">Idea title</label>
+        <input type="text" id="ititle" placeholder="e.g. AI-powered meal planner for athletes" maxlength="100" oninput="uc('ititle','c1',100)">
+        <div class="char-count"><span id="c1">0</span> / 100</div>
+      </div>
+      <div class="field">
+        <label for="idesc">Description <span style="color:var(--text3);font-weight:400">(min 30 characters)</span></label>
+        <textarea id="idesc" placeholder="Describe your startup — the problem it solves, how it works, your target users, and what makes it different from existing solutions." maxlength="800" oninput="uc('idesc','c2',800)"></textarea>
+        <div class="char-count"><span id="c2">0</span> / 800</div>
+      </div>
+      <button class="submit-btn" id="sbtn" onclick="submitIdea()">
+        <span id="btnlbl">Validate my idea</span>
+      </button>
+      <div style="margin-top: 0.5rem;">
+        <p style="font-size:12px;color:var(--text3);margin-bottom:0.875rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;">What you'll get</p>
+        <div class="features-grid">
+          <div class="feature-item"><div class="feature-icon">🎯</div><div class="feature-text">Problem statement & customer persona</div></div>
+          <div class="feature-item"><div class="feature-icon">📊</div><div class="feature-text">Market size & growth overview</div></div>
+          <div class="feature-item"><div class="feature-icon">⚔️</div><div class="feature-text">3 competitors with differentiators</div></div>
+          <div class="feature-item"><div class="feature-icon">⚙️</div><div class="feature-text">Suggested MVP tech stack</div></div>
+          <div class="feature-item"><div class="feature-icon">⚠️</div><div class="feature-text">Risk level: Low / Medium / High</div></div>
+          <div class="feature-item"><div class="feature-icon">💰</div><div class="feature-text">Profitability score (0–100)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD VIEW -->
+  <div id="view-dashboard" class="view">
+    <div class="stats-row" id="statsrow"></div>
+    <div class="db-controls">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchq" placeholder="Search ideas..." oninput="renderGrid()">
+      </div>
+      <div class="filters">
+        <button class="fb on" onclick="setF('All',this)">All</button>
+        <button class="fb" onclick="setF('Low',this)">Low risk</button>
+        <button class="fb" onclick="setF('Medium',this)">Medium</button>
+        <button class="fb" onclick="setF('High',this)">High risk</button>
+      </div>
+    </div>
+    <div id="igrid" class="ideas-grid"></div>
+  </div>
+
+  <!-- DETAIL VIEW -->
+  <div id="view-detail" class="view">
+    <button class="back-btn" onclick="gv('dashboard')">← Back to dashboard</button>
+    <div id="confirm-overlay" class="confirm-overlay">
+      <div class="confirm-box">
+        <h3>Delete this idea?</h3>
+        <p>This will permanently remove the idea and its AI report. This cannot be undone.</p>
+        <div class="confirm-btns">
+          <button class="cbtn cbtn-cancel" onclick="hideConfirm()">Cancel</button>
+          <button class="cbtn cbtn-del" onclick="confirmDelete()">Delete idea</button>
+        </div>
+      </div>
+    </div>
+    <div id="dcontent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+// If you have a backend server, set this to your server URL e.g. http://localhost:5000
+// If empty, the app calls the AI directly from the browser (no backend needed)
+const API_BASE = 'http://localhost:5000';
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let ideas = [], filterActive = 'All', pendingDelId = null, gaugeChart = null;
+
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
+function saveLocal() { localStorage.setItem('iv-ideas', JSON.stringify(ideas)); }
+function loadLocal() {
+  try { ideas = JSON.parse(localStorage.getItem('iv-ideas') || '[]'); } catch(e) { ideas = []; }
+}
+
+// ─── VIEW NAVIGATION ─────────────────────────────────────────────────────────
+function gv(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(el => el.classList.remove('on'));
+  document.getElementById('view-' + v).classList.add('on');
+  if (v === 'submit') document.querySelector('.nb').classList.add('on');
+  if (v === 'dashboard') { document.getElementById('dnav').classList.add('on'); renderDash(); }
+  if (v === 'detail') document.getElementById('dnav').classList.remove('on');
+}
+
+function refreshNav() {
+  const c = ideas.length;
+  document.getElementById('dcnt').textContent = c > 0 ? `(${c})` : '';
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function uc(id, cid, max) { document.getElementById(cid).textContent = document.getElementById(id).value.length; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function riskClass(r) { return r==='Low'?'rL':r==='High'?'rH':'rM'; }
+function riskColor(r) { return r==='Low'?'#0F6E56':r==='High'?'#A32D2D':'#854F0B'; }
+function scoreColor(s) { return s>=70?'#0F6E56':s>=40?'#854F0B':'#A32D2D'; }
+function fmtDate(iso) { return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+
+function toast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  setTimeout(() => t.className = 'toast', 3200);
+}
+
+// ─── SUBMIT ──────────────────────────────────────────────────────────────────
+async function submitIdea() {
+  const title = document.getElementById('ititle').value.trim();
+  const desc = document.getElementById('idesc').value.trim();
+  if (!title) { toast('Please enter an idea title.', true); return; }
+  if (desc.length < 30) { toast('Please write a longer description (min 30 chars).', true); return; }
+
+  const btn = document.getElementById('sbtn');
+  const lbl = document.getElementById('btnlbl');
+  btn.disabled = true;
+  lbl.innerHTML = '<div class="spinner"></div> Analyzing with AI...';
+
+  try {
+    let report;
+    if (API_BASE) {
+      // Use backend API
+      const res = await fetch(API_BASE + '/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description: desc })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+      const idea = await res.json();
+      ideas.unshift(idea);
+    } else {
+      // Call AI directly (no backend)
+      report = await callAI(title, desc);
+      const idea = { id: Date.now().toString(), title, description: desc, report, createdAt: new Date().toISOString() };
+      ideas.unshift(idea);
+      saveLocal();
+    }
+    refreshNav();
+    document.getElementById('ititle').value = '';
+    document.getElementById('idesc').value = '';
+    document.getElementById('c1').textContent = '0';
+    document.getElementById('c2').textContent = '0';
+    toast('Report ready!');
+    setTimeout(() => gv('dashboard'), 500);
+  } catch(e) {
+    toast('Error: ' + (e.message || 'Try again.'), true);
+  }
+
+  btn.disabled = false;
+  lbl.textContent = 'Validate my idea';
+}
+
+// ─── AI CALL ─────────────────────────────────────────────────────────────────
+async function callAI(title, desc) {
+  const ANTHROPIC_API_KEY = ''; // ← Paste your key here if running without backend
+  if (!ANTHROPIC_API_KEY) throw new Error('No API key. Add your ANTHROPIC_API_KEY in index.html or use the backend.');
+
+  const safeT = title.replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+  const safeD = desc.replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+  const prompt = `You are an expert startup consultant. Analyze the startup idea below and return ONLY a valid JSON object — no markdown, no explanation, no backticks.
+
+JSON schema:
+{"problem":"2-3 sentence problem statement","customer":"Target customer persona","market":"Market size and opportunity","competitors":[{"name":"Name","differentiation":"One sentence"},{"name":"Name","differentiation":"One sentence"},{"name":"Name","differentiation":"One sentence"}],"tech_stack":["T1","T2","T3","T4","T5"],"risk_level":"Medium","profitability_score":72,"justification":"2-3 sentence justification"}
+
+Rules: risk_level = Low/Medium/High. profitability_score = integer 0-100. Exactly 3 competitors. 4-6 tech stack items.
+
+Input: {"title":"${safeT}","description":"${safeD}"}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1024, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>{}); throw new Error(e?.error?.message || 'API error ' + res.status); }
+  const data = await res.json();
+  const raw = data.content.map(b => b.text||'').join('').trim().replace(/```json|```/g,'').trim();
+  return JSON.parse(raw);
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+function renderDash() { refreshNav(); renderStats(); renderGrid(); }
+
+function renderStats() {
+  const el = document.getElementById('statsrow');
+  if (!ideas.length) { el.innerHTML = ''; return; }
+  const avg = Math.round(ideas.reduce((a,b) => a + (b.report?.profitability_score||0), 0) / ideas.length);
+  const low = ideas.filter(i => i.report?.risk_level==='Low').length;
+  const hi  = ideas.filter(i => i.report?.risk_level==='High').length;
+  el.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total ideas</div><div class="stat-value">${ideas.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Avg score</div><div class="stat-value" style="color:var(--green)">${avg}</div></div>
+    <div class="stat-card"><div class="stat-label">Low risk</div><div class="stat-value" style="color:var(--green)">${low}</div></div>
+    <div class="stat-card"><div class="stat-label">High risk</div><div class="stat-value" style="color:var(--red)">${hi}</div></div>`;
+}
+
+function setF(val, el) {
+  filterActive = val;
+  document.querySelectorAll('.fb').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  renderGrid();
+}
+
+function renderGrid() {
+  const q = (document.getElementById('searchq')?.value || '').toLowerCase();
+  let list = ideas;
+  if (filterActive !== 'All') list = list.filter(i => i.report?.risk_level === filterActive);
+  if (q) list = list.filter(i => i.title.toLowerCase().includes(q) || (i.description||'').toLowerCase().includes(q));
+
+  const grid = document.getElementById('igrid');
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state"><div style="font-size:40px;margin-bottom:1rem;opacity:0.3">📋</div><h3>${ideas.length ? 'No matching ideas' : 'No ideas yet'}</h3><p>${ideas.length ? 'Try a different filter or search.' : 'Submit your first startup idea to get started.'}</p></div>`;
+    return;
+  }
+  grid.innerHTML = list.map(idea => {
+    const s = idea.report?.profitability_score ?? 0;
+    const r = idea.report?.risk_level ?? 'Medium';
+    return `<div class="idea-card" onclick="showDetail('${idea.id}')">
+      <button class="del-btn" title="Delete" onclick="reqDel(event,'${idea.id}')">✕</button>
+      <div class="card-top"><div class="card-title">${esc(idea.title)}</div><span class="risk-badge ${riskClass(r)}">${r} risk</span></div>
+      <p class="card-desc">${esc(idea.description)}</p>
+      <div class="card-footer">
+        <div class="score-wrap"><div class="score-track"><div class="score-fill" style="width:${s}%"></div></div><span class="score-num">${s}/100</span></div>
+        <span class="card-date">${fmtDate(idea.createdAt)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── DETAIL ──────────────────────────────────────────────────────────────────
+function showDetail(id) {
+  const idea = ideas.find(i => i.id === id || i._id === id);
+  if (!idea) return;
+  const r = idea.report;
+  const s = r.profitability_score ?? 0;
+  const risk = r.risk_level ?? 'Medium';
+  const sc = scoreColor(s);
+  const rc = riskColor(risk);
+
+  const comps = (r.competitors||[]).map(c =>
+    `<li><span class="comp-name">${esc(c.name)}</span><span class="comp-diff">${esc(c.differentiation)}</span></li>`
+  ).join('');
+  const techs = (r.tech_stack||[]).map(t => `<span class="tech-pill">${esc(t)}</span>`).join('');
+
+  document.getElementById('dcontent').innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-title">${esc(idea.title)}</div>
+        <div class="detail-desc">${esc(idea.description)}</div>
+      </div>
+      <div class="action-btns">
+        <button class="action-btn danger" onclick="reqDel2('${idea.id||idea._id}')">Delete</button>
+        <button class="action-btn primary" onclick="window.print()">Export PDF</button>
+      </div>
+    </div>
+    <div class="metrics-row">
+      <div class="metric"><div class="metric-label">Analyzed</div><div class="metric-value" style="font-size:14px">${fmtDate(idea.createdAt)}</div></div>
+      <div class="metric"><div class="metric-label">Risk level</div><div class="metric-value" style="color:${rc}">${risk}</div></div>
+      <div class="metric"><div class="metric-label">Competitors</div><div class="metric-value">${(r.competitors||[]).length}</div></div>
+      <div class="metric"><div class="metric-label">Tech stack</div><div class="metric-value">${(r.tech_stack||[]).length} items</div></div>
+    </div>
+    <div class="gauge-row">
+      <div class="gauge-wrap">
+        <canvas id="gauge" width="100" height="100" role="img" aria-label="Profitability score: ${s} out of 100">${s}/100</canvas>
+        <div class="gauge-center"><div class="gauge-num" style="color:${sc}">${s}</div><div class="gauge-sub">/ 100</div></div>
+      </div>
+      <div class="gauge-info">
+        <h4>Profitability score</h4>
+        <p>${esc(r.justification || '')}</p>
+      </div>
+    </div>
+    <div class="sections-grid">
+      <div class="report-sec"><h4>🎯 Problem</h4><p>${esc(r.problem||'')}</p></div>
+      <div class="report-sec"><h4>👤 Customer persona</h4><p>${esc(r.customer||'')}</p></div>
+      <div class="report-sec"><h4>🌍 Market overview</h4><p>${esc(r.market||'')}</p></div>
+      <div class="report-sec"><h4>⚔️ Competitors</h4><ul class="comp-list">${comps}</ul></div>
+    </div>
+    <div class="report-sec full-row"><h4>⚙️ Suggested tech stack</h4><div class="tech-wrap">${techs}</div></div>`;
+
+  gv('detail');
+  document.getElementById('dnav').classList.remove('on');
+
+  setTimeout(() => {
+    const canvas = document.getElementById('gauge');
+    if (!canvas) return;
+    if (gaugeChart) { gaugeChart.destroy(); gaugeChart = null; }
+    gaugeChart = new Chart(canvas, {
+      type: 'doughnut',
+      data: { datasets: [{ data: [s, 100-s], backgroundColor: [sc, 'rgba(0,0,0,0.07)'], borderWidth: 0, circumference: 270, rotation: 225 }] },
+      options: { responsive: false, cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 700 } }
+    });
+  }, 60);
+}
+
+// ─── DELETE ──────────────────────────────────────────────────────────────────
+function reqDel(e, id) { e.stopPropagation(); pendingDelId = id; showDetail(id); setTimeout(() => document.getElementById('confirm-overlay').classList.add('show'), 50); }
+function reqDel2(id) { pendingDelId = id; document.getElementById('confirm-overlay').classList.add('show'); }
+function hideConfirm() { document.getElementById('confirm-overlay').classList.remove('show'); pendingDelId = null; }
+
+async function confirmDelete() {
+  if (!pendingDelId) return;
+  if (API_BASE) {
+    await fetch(API_BASE + '/ideas/' + pendingDelId, { method: 'DELETE' }).catch(()=>{});
+  }
+  ideas = ideas.filter(i => i.id !== pendingDelId && i._id !== pendingDelId);
+  saveLocal();
+  pendingDelId = null;
+  hideConfirm();
+  toast('Idea deleted.');
+  gv('dashboard');
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+loadLocal();
+refreshNav();
+</script>
+</body>
+</html>
