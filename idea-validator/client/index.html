@@ -264,7 +264,7 @@
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 // If you have a backend server, set this to your server URL e.g. http://localhost:5000
 // If empty, the app calls the AI directly from the browser (no backend needed)
-const API_BASE = 'http://localhost:5000';
+const API_BASE = 'https://idea-validate.onrender.com/';
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let ideas = [], filterActive = 'All', pendingDelId = null, gaugeChart = null;
@@ -321,7 +321,7 @@ async function submitIdea() {
     let report;
     if (API_BASE) {
       // Use backend API
-      const res = await fetch(API_BASE + '/ideas', {
+      const res = await fetch(API_BASE + 'ideas/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, description: desc })
@@ -500,7 +500,7 @@ function hideConfirm() { document.getElementById('confirm-overlay').classList.re
 async function confirmDelete() {
   if (!pendingDelId) return;
   if (API_BASE) {
-    await fetch(API_BASE + '/ideas/' + pendingDelId, { method: 'DELETE' }).catch(()=>{});
+    await fetch(API_BASE + 'ideas/' + pendingDelId, { method: 'DELETE' }).catch(()=>{});
   }
   ideas = ideas.filter(i => i.id !== pendingDelId && i._id !== pendingDelId);
   saveLocal();
